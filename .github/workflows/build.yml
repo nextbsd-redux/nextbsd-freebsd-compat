@@ -1,0 +1,19 @@
+name: Build FreeBSD Compat
+# PLACEHOLDER — scaffolding only. The fbsdglue build (userland /usr/src targets
+# requiring the world toolchain) is not implemented yet; content migrates from
+# nextbsd-redux/nextbsd later. This stub exists so the repo, its triggers, and
+# its DISPATCH_TOKEN credential are wired in advance and it returns green.
+on:
+  repository_dispatch:
+    types: [compat-build]
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Not implemented yet
+        run: |
+          echo "nextbsd-freebsd-compat: build not implemented yet (scaffold)."
+          echo "Pending fbsdglue migration from nextbsd-redux/nextbsd."
+          echo "Exiting 0."

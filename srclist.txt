@@ -1,0 +1,72 @@
+# Curated /usr/src directories to cross-build into the NextBSD base, in
+# dependency order (libs before consumers). ONLY these are built + installed
+# to /stage. NEVER freebsd-runtime (init, rc, /etc), NEVER bin/sh (Apple's
+# shell comes from nextbsd). Lines starting with # and blanks are ignored.
+
+# === foundation: libc + startup + dynamic loader (proven) ===
+lib/csu
+lib/libc
+lib/libsys
+libexec/rtld-elf
+
+# === libraries (dependency-ordered) ===
+# leaf libs (libc only)
+lib/libmd
+lib/libnv
+lib/libelf
+lib/libexpat
+lib/liblzma
+lib/libz
+lib/libbz2
+lib/libsbuf
+lib/libcrypt
+lib/libutil
+lib/libbsm
+lib/libexecinfo
+lib/libufs
+lib/libnetbsd
+lib/libdevctl
+lib/libjail
+lib/ncurses
+# libs with intra-list deps
+lib/libedit
+lib/libcasper
+lib/libgeom
+lib/libarchive
+
+# === pkg bootstrap (you asked for this) ===
+usr.sbin/pkg
+
+# === fbsdglue tools (bin/sh intentionally excluded) ===
+bin/freebsd-version
+bin/kenv
+sbin/devfs
+sbin/fsck
+sbin/fsck_ffs
+sbin/kldconfig
+sbin/kldload
+sbin/kldstat
+sbin/kldunload
+sbin/ldconfig
+sbin/mount
+sbin/newfs
+sbin/tunefs
+sbin/umount
+sbin/reboot
+sbin/shutdown
+sbin/geom
+usr.bin/ldd
+usr.bin/su
+usr.bin/login
+usr.bin/xz
+usr.sbin/crashinfo
+usr.sbin/devctl
+usr.sbin/diskinfo
+usr.sbin/fstyp
+usr.sbin/gstat
+usr.sbin/kldxref
+usr.sbin/nologin
+usr.sbin/nmtree
+usr.sbin/pciconf
+usr.sbin/pw
+libexec/save-entropy

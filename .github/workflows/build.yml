@@ -1,19 +1,113 @@
-name: Build FreeBSD Compat
-# PLACEHOLDER — scaffolding only. The fbsdglue build (userland /usr/src targets
-# requiring the world toolchain) is not implemented yet; content migrates from
-# nextbsd-redux/nextbsd later. This stub exists so the repo, its triggers, and
-# its DISPATCH_TOKEN credential are wired in advance and it returns green.
+name: Build NextBSD Base (curated)
 on:
   repository_dispatch:
-    types: [compat-build]
+    types: [toolchain-updated]
   workflow_dispatch:
+    inputs:
+      fbsd_sha:
+        description: 'Pinned FreeBSD SHA for the toolchain image tag (blank = latest)'
+        required: false
+        default: ''
+
+env:
+  FREEBSD_BRANCH: releng/15.0
+  # Build prereqs only (these install NOTHING to the base): no compiler in base,
+  # no tests/lib32. The base gets ONLY the dirs in srclist.txt via curated install.
+  WORLD_FLAGS: WITHOUT_TOOLCHAIN=yes WITHOUT_TESTS=yes WITHOUT_LIB32=yes WITHOUT_MAN=yes
 
 jobs:
-  placeholder:
+  base:
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+    # amd64 first; arm64 matrix leg added once the mechanism is proven.
+    container:
+      image: ghcr.io/nextbsd-redux/nextbsd-kernel-toolchain:amd64-${{ (github.event.client_payload.fbsd_sha || inputs.fbsd_sha) && format('fbsd-{0}', github.event.client_payload.fbsd_sha || inputs.fbsd_sha) || 'latest' }}
     steps:
-      - name: Not implemented yet
+      - uses: actions/checkout@v4
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-base-amd64-${{ github.run_id }}
+          restore-keys: |
+            ccache-base-amd64-
+
+      - name: ccache reset counters
         run: |
-          echo "nextbsd-freebsd-compat: build not implemented yet (scaffold)."
-          echo "Pending fbsdglue migration from nextbsd-redux/nextbsd."
-          echo "Exiting 0."
+          ccache -o max_size=8G
+          ccache -z
+          ccache -s
+
+      # Stage the cross sysroot: world toolchain (build-tools + cross-tools, minus
+      # clang via --cross-bindir) + headers. Installs NOTHING to the base.
+      - name: Bootstrap sysroot (toolchain + includes)
+        run: |
+          cd /usr/src
+          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            toolchain -j"$(nproc)"
+          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            _includes -j"$(nproc)"
+
+      - name: ccache stats (after bootstrap)
+        run: ccache -s
+
+      # Curated per-directory build into /stage, in the cross buildenv. ONLY the
+      # dirs in srclist.txt are built + installed — nothing else touches the base.
+      - name: Build curated base into /stage
+        run: |
+          cd /usr/src
+          mkdir -p /stage
+          grep -vE '^[[:space:]]*(#|$)' "$GITHUB_WORKSPACE/srclist.txt" > /tmp/srclist
+          cat > /tmp/curated.sh <<'EOS'
+          set -e
+          # buildenv pre-bakes INSTALL/METALOG with an EMPTY DESTDIR. We must
+          # KEEP the -N (FreeBSD user/group db for name resolution on Linux) and
+          # -U (metalog mode — no real chown, which Linux can't do: no `wheel`),
+          # and only fix the DESTDIR. So set INSTALL/METALOG explicitly with /stage.
+          export DESTDIR=/stage
+          export METALOG=/stage/METALOG
+          export INSTALL="install -N /usr/src/etc -U -M /stage/METALOG -D /stage"
+          # Create ONLY the base-userland target dirs the curated installs need.
+          # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
+          mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \
+                   /stage/usr/bin /stage/usr/sbin /stage/usr/lib /stage/usr/libexec \
+                   /stage/usr/share /stage/usr/libdata/pkgconfig
+          # MK_INCLUDES=no on install: the runtime base needs NO headers (the
+          # compiler comes from pkg). This also avoids contrib libs installing to
+          # nonstandard /usr/include subdirs that don't exist.
+          while IFS= read -r d; do
+            echo "::group::build $d"
+            make -C "/usr/src/$d" obj
+            make -C "/usr/src/$d" all
+            make -C "/usr/src/$d" install MK_INCLUDES=no MK_MAN=no
+            echo "::endgroup::"
+          done < /tmp/srclist
+          EOS
+          chmod +x /tmp/curated.sh
+          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            buildenv BUILDENV_SHELL=/tmp/curated.sh
+
+      - name: Inspect /stage
+        run: |
+          echo "=== /stage tree ==="; find /stage -maxdepth 3 | head -60
+          echo "=== libc present? ==="; ls -l /stage/lib/libc.so* /stage/libexec/ld-elf.so.1 2>&1 || true
+
+      - name: Pack base artifact
+        run: |
+          rm -f /stage/METALOG   # staging manifest byproduct, not part of base
+          # HARD GUARD: nextbsd owns these on the ISO — strip them even if a
+          # tool's Makefile tried to install a config/runtime file.
+          rm -rf /stage/etc /stage/var /stage/root /stage/boot /stage/.profile /stage/.cshrc
+          echo "=== final base tree (top levels) ==="; find /stage -maxdepth 2 -type d | sort
+          tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
+
+      - name: Upload base artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextbsd-base-amd64
+          path: /tmp/nextbsd-base-amd64.tar.gz

@@ -75,16 +75,15 @@ jobs:
           # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
           mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \
                    /stage/usr/bin /stage/usr/sbin /stage/usr/lib /stage/usr/libexec \
-                   /stage/usr/include /stage/usr/share /stage/usr/libdata/pkgconfig
-          # Create the /usr/include subdir hierarchy (edit/readline, casper, bsm,
-          # ...) so lib header installs have target dirs. This is /usr/include
-          # ONLY (BSD.include.dist) — it does NOT touch /etc.
-          mtree -deU -f /usr/src/etc/mtree/BSD.include.dist -p /stage/usr/include >/dev/null 2>&1 || true
+                   /stage/usr/share /stage/usr/libdata/pkgconfig
+          # MK_INCLUDES=no on install: the runtime base needs NO headers (the
+          # compiler comes from pkg). This also avoids contrib libs installing to
+          # nonstandard /usr/include subdirs that don't exist.
           while IFS= read -r d; do
             echo "::group::build $d"
             make -C "/usr/src/$d" obj
             make -C "/usr/src/$d" all
-            make -C "/usr/src/$d" install
+            make -C "/usr/src/$d" install MK_INCLUDES=no MK_MAN=no
             echo "::endgroup::"
           done < /tmp/srclist
           EOS

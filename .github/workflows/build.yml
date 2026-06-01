@@ -64,13 +64,17 @@ jobs:
           grep -vE '^[[:space:]]*(#|$)' "$GITHUB_WORKSPACE/srclist.txt" > /tmp/srclist
           cat > /tmp/curated.sh <<'EOS'
           set -e
-          # buildenv pre-bakes INSTALL/METALOG with an EMPTY DESTDIR; per-dir
-          # installs inherit that and break. Export DESTDIR and unset the
-          # pre-baked vars so each make recomputes them with DESTDIR=/stage.
+          # buildenv pre-bakes INSTALL/METALOG with an EMPTY DESTDIR; unset so
+          # each make recomputes them with DESTDIR=/stage.
           export DESTDIR=/stage
           unset INSTALL METALOG
-          # Base directory skeleton (mtree hierarchy — directories only).
-          make -C /usr/src distrib-dirs
+          # Create ONLY the base-userland target dirs the curated installs need.
+          # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
+          mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \
+                   /stage/usr/bin /stage/usr/sbin /stage/usr/lib /stage/usr/libexec \
+                   /stage/usr/include/casper /stage/usr/include/bsm \
+                   /stage/usr/include/editline/readline /stage/usr/include/lzma \
+                   /stage/usr/share /stage/usr/libdata/pkgconfig
           while IFS= read -r d; do
             echo "::group::build $d"
             make -C "/usr/src/$d" obj
@@ -90,7 +94,9 @@ jobs:
           echo "=== libc present? ==="; ls -l /stage/lib/libc.so* /stage/libexec/ld-elf.so.1 2>&1 || true
 
       - name: Pack base artifact
-        run: tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
+        run: |
+          rm -f /stage/METALOG   # staging manifest byproduct, not part of base
+          tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
 
       - name: Upload base artifact
         uses: actions/upload-artifact@v4

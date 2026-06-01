@@ -75,10 +75,9 @@ jobs:
           # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
           mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \
                    /stage/usr/bin /stage/usr/sbin /stage/usr/lib /stage/usr/libexec \
-                   /stage/usr/share /stage/usr/libdata/pkgconfig
-          # MK_INCLUDES=no on install: the runtime base needs NO headers (the
-          # compiler comes from pkg). This also avoids contrib libs installing to
-          # nonstandard /usr/include subdirs that don't exist.
+                   /stage/usr/include /stage/usr/share /stage/usr/libdata/pkgconfig
+          # MK_INCLUDES=no per dir (per-dir header installs hit nonstandard
+          # contrib /usr/include subdirs). Headers are staged in bulk below.
           while IFS= read -r d; do
             echo "::group::build $d"
             make -C "/usr/src/$d" obj
@@ -86,6 +85,10 @@ jobs:
             make -C "/usr/src/$d" install MK_INCLUDES=no MK_MAN=no
             echo "::endgroup::"
           done < /tmp/srclist
+          # Keep the FULL FreeBSD /usr/include in the base (kept ON for now) so
+          # the nextbsd chroot can compile the Apple components (mach.ko/launchd/
+          # libxpc need sys/* headers, not just libc's). From the staged sysroot.
+          cp -a /usr/obj/usr/src/amd64.amd64/tmp/usr/include/. /stage/usr/include/
           EOS
           chmod +x /tmp/curated.sh
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \

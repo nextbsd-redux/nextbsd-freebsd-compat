@@ -31,6 +31,13 @@ lib/libssp
 lib/msun
 lib/librt
 lib/libdl
+# libcompiler_rt: the compiler builtins static archive. Installs
+# /usr/lib/libcompiler_rt.a + the /usr/lib/libgcc.a symlink. Needed because
+# the ports llvm19 build compiler (now used instead of base clang) emits
+# `-lgcc` on the FreeBSD link line, which resolves to libgcc.a; pkgbase
+# provided it via FreeBSD-libcompiler_rt-dev, which we dropped. Static
+# archive only — no runtime ABI-skew risk (unlike libc++/libcxxrt, deferred).
+lib/libcompiler_rt
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)

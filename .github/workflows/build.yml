@@ -99,6 +99,10 @@ jobs:
       - name: Pack base artifact
         run: |
           rm -f /stage/METALOG   # staging manifest byproduct, not part of base
+          # HARD GUARD: nextbsd owns these on the ISO — strip them even if a
+          # tool's Makefile tried to install a config/runtime file.
+          rm -rf /stage/etc /stage/var /stage/root /stage/boot /stage/.profile /stage/.cshrc
+          echo "=== final base tree (top levels) ==="; find /stage -maxdepth 2 -type d | sort
           tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
 
       - name: Upload base artifact

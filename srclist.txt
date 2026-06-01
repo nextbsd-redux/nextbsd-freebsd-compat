@@ -44,6 +44,17 @@ lib/libcompiler_rt
 # is already covered: crt1.o/Scrt1.o/gcrt1.o <- lib/csu, libc.a <- lib/libc,
 # libssp_nonshared.a <- lib/libssp_nonshared.
 lib/libc_nonshared
+# C++ runtime: libcxxrt (C++ ABI) + libc++ (stdlib). Provides /usr/lib/
+# libc++.so + libc++.so.1 + libcxxrt.so.1, which clang++ pulls in via -lc++
+# (the cmake CXX-compiler check needs it). UN-DEFERRED: this trio was blocked
+# only because overlaying our p9 libc++ broke the SNAPSHOT base clang
+# (libprivatellvm needed a newer __hash_memory). We removed base clang — the
+# build compiler is now PORTS clang 19, which carries its own rpath'd libc++
+# and doesn't use /usr/lib/libc++. Our compat libc++ is releng/15.0 = libc++
+# 19, matching ports clang 19 and the ports tools' expectations. libc++ is the
+# heavy build (libcxx contrib sources).
+lib/libcxxrt
+lib/libc++
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)

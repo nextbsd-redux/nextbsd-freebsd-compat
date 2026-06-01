@@ -85,10 +85,21 @@ jobs:
             make -C "/usr/src/$d" install MK_INCLUDES=no MK_MAN=no
             echo "::endgroup::"
           done < /tmp/srclist
-          # Keep the FULL FreeBSD /usr/include in the base (kept ON for now) so
-          # the nextbsd chroot can compile the Apple components (mach.ko/launchd/
-          # libxpc need sys/* headers, not just libc's). From the staged sysroot.
-          cp -a /usr/obj/usr/src/amd64.amd64/tmp/usr/include/. /stage/usr/include/
+          # Stage the FULL FreeBSD /usr/include into the base (for nextbsd chroot
+          # builds of the Apple components). Diagnose the sysroot, then copy the
+          # whole tree via tar pipe (robust for symlinks/perms). The earlier
+          # `cp -a` produced a partial tree (missing stdint.h/sys/types.h).
+          SYSROOT_INC=/usr/obj/usr/src/amd64.amd64/tmp/usr/include
+          echo "=== sysroot include diag ==="
+          ls -la "$SYSROOT_INC/stdint.h" "$SYSROOT_INC/sys/types.h" 2>&1 | head
+          echo "    sysroot include entry count: $(find "$SYSROOT_INC" -type f 2>/dev/null | wc -l)"
+          # The sysroot headers are SYMLINKS into the source tree (make _includes
+          # symlink optimization). Dereference with cp -L so /stage gets REAL
+          # header files (tar isn't in buildenv's PATH; cp is).
+          cp -RLp "$SYSROOT_INC/." /stage/usr/include/
+          echo "=== staged /stage/usr/include check ==="
+          ls -la /stage/usr/include/stdint.h /stage/usr/include/sys/types.h 2>&1 | head
+          echo "    staged include entry count: $(find /stage/usr/include -type f | wc -l)"
           EOS
           chmod +x /tmp/curated.sh
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \

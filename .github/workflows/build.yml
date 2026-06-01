@@ -125,3 +125,18 @@ jobs:
         with:
           name: nextbsd-base-amd64
           path: /tmp/nextbsd-base-amd64.tar.gz
+
+      # Cascade to the nextbsd ISO build, which ingests THIS base artifact.
+      # Gated on main + (implicit) prior-step success so branch/test
+      # workflow_dispatch builds don't trigger a prod ISO. nextbsd pulls the
+      # latest successful compat *main* artifact, so this fires only for main —
+      # by which point the upload above is the newest main success. End-to-end
+      # chain: releng/15.0 -> toolchain -> compat -> nextbsd.
+      - name: Trigger downstream nextbsd ISO build (main only)
+        if: github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+        run: |
+          gh api repos/nextbsd-redux/nextbsd/dispatches \
+            -f event_type=base-updated \
+            -f "client_payload[fbsd_sha]=${{ github.event.client_payload.fbsd_sha || inputs.fbsd_sha }}"

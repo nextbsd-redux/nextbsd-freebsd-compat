@@ -8,6 +8,14 @@ lib/csu
 lib/libc
 lib/libsys
 libexec/rtld-elf
+# libthr MUST ship with libc and from the SAME source level: the two share
+# the private __libc_interposing[] table (libthr writes the cancellation-
+# point syscall slots into it). A version skew where libthr has more
+# INTERPOS_ slots than libc statically sized the array for is an out-of-
+# bounds write that corrupts libc globals. Symptom we hit: pkg's sqlite
+# DELETE failed with "locking protocol" (DB fd went EBADF) because our p9
+# libc (INTERPOS_MAX=45) ran against a leftover snapshot libthr (MAX=46).
+lib/libthr
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)

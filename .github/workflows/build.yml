@@ -75,9 +75,11 @@ jobs:
           # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
           mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \
                    /stage/usr/bin /stage/usr/sbin /stage/usr/lib /stage/usr/libexec \
-                   /stage/usr/include/casper /stage/usr/include/bsm \
-                   /stage/usr/include/editline/readline /stage/usr/include/lzma \
-                   /stage/usr/share /stage/usr/libdata/pkgconfig
+                   /stage/usr/include /stage/usr/share /stage/usr/libdata/pkgconfig
+          # Create the /usr/include subdir hierarchy (edit/readline, casper, bsm,
+          # ...) so lib header installs have target dirs. This is /usr/include
+          # ONLY (BSD.include.dist) — it does NOT touch /etc.
+          mtree -deU -f /usr/src/etc/mtree/BSD.include.dist -p /stage/usr/include >/dev/null 2>&1 || true
           while IFS= read -r d; do
             echo "::group::build $d"
             make -C "/usr/src/$d" obj

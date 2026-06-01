@@ -76,8 +76,11 @@ jobs:
           done < /tmp/srclist
           EOS
           chmod +x /tmp/curated.sh
+          # DESTDIR must be set on the buildenv call so the env's INSTALL var is
+          # computed with it (the per-dir installs inherit that INSTALL).
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
             TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            DESTDIR=/stage \
             buildenv BUILDENV_SHELL=/tmp/curated.sh
 
       - name: Inspect /stage

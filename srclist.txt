@@ -31,6 +31,30 @@ lib/libssp
 lib/msun
 lib/librt
 lib/libdl
+# libcompiler_rt: the compiler builtins static archive. Installs
+# /usr/lib/libcompiler_rt.a + the /usr/lib/libgcc.a symlink. Needed because
+# the ports llvm19 build compiler (now used instead of base clang) emits
+# `-lgcc` on the FreeBSD link line, which resolves to libgcc.a; pkgbase
+# provided it via FreeBSD-libcompiler_rt-dev, which we dropped. Static
+# archive only — no runtime ABI-skew risk (unlike libc++/libcxxrt, deferred).
+lib/libcompiler_rt
+# libc_nonshared: the small static companion the clang link spec always pulls
+# in via -lc_nonshared (/usr/lib/libc_nonshared.a). Built by its OWN dir (not
+# lib/libc). Was shipped by FreeBSD-clibs-dev (dropped). The rest of clibs-dev
+# is already covered: crt1.o/Scrt1.o/gcrt1.o <- lib/csu, libc.a <- lib/libc,
+# libssp_nonshared.a <- lib/libssp_nonshared.
+lib/libc_nonshared
+# C++ runtime: libcxxrt (C++ ABI) + libc++ (stdlib). Provides /usr/lib/
+# libc++.so + libc++.so.1 + libcxxrt.so.1, which clang++ pulls in via -lc++
+# (the cmake CXX-compiler check needs it). UN-DEFERRED: this trio was blocked
+# only because overlaying our p9 libc++ broke the SNAPSHOT base clang
+# (libprivatellvm needed a newer __hash_memory). We removed base clang — the
+# build compiler is now PORTS clang 19, which carries its own rpath'd libc++
+# and doesn't use /usr/lib/libc++. Our compat libc++ is releng/15.0 = libc++
+# 19, matching ports clang 19 and the ports tools' expectations. libc++ is the
+# heavy build (libcxx contrib sources).
+lib/libcxxrt
+lib/libc++
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)

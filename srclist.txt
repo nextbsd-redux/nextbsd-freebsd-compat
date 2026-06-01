@@ -31,6 +31,15 @@ lib/libssp
 lib/msun
 lib/librt
 lib/libdl
+# The C++ trio completes the FreeBSD-clibs superset. Dependency order:
+# libcompiler_rt (builtins) -> libcxxrt (C++ ABI/runtime, needs libgcc_s
+# unwinder) -> libc++ (C++ stdlib, needs libcxxrt). libc++ is the heavy
+# one (builds the libcxx contrib sources). The Apple/GNUstep stack links
+# /lib/libc++.so.1 + /lib/libcxxrt.so.1, so the base must own them once
+# FreeBSD-clibs is gone.
+lib/libcompiler_rt
+lib/libcxxrt
+lib/libc++
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)

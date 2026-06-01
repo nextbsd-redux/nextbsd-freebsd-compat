@@ -93,7 +93,10 @@ jobs:
           echo "=== sysroot include diag ==="
           ls -la "$SYSROOT_INC/stdint.h" "$SYSROOT_INC/sys/types.h" 2>&1 | head
           echo "    sysroot include entry count: $(find "$SYSROOT_INC" -type f 2>/dev/null | wc -l)"
-          ( cd "$SYSROOT_INC" && tar -cf - . ) | ( cd /stage/usr/include && tar -xpf - )
+          # The sysroot headers are SYMLINKS into the source tree (make _includes
+          # symlink optimization). Dereference with cp -L so /stage gets REAL
+          # header files (tar isn't in buildenv's PATH; cp is).
+          cp -RLp "$SYSROOT_INC/." /stage/usr/include/
           echo "=== staged /stage/usr/include check ==="
           ls -la /stage/usr/include/stdint.h /stage/usr/include/sys/types.h 2>&1 | head
           echo "    staged include entry count: $(find /stage/usr/include -type f | wc -l)"

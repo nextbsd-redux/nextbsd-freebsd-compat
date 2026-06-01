@@ -17,6 +17,21 @@ libexec/rtld-elf
 # libc (INTERPOS_MAX=45) ran against a leftover snapshot libthr (MAX=46).
 lib/libthr
 
+# === remaining FreeBSD-clibs members (make the base a clibs superset) ===
+# The pkgbase FreeBSD-clibs package bundles 11 libs; we already build
+# libc/libsys/libthr above. These are the rest of the SIMPLE C members so
+# the from-source base provides /lib/{libgcc_s,libssp,libm,librt}.so +
+# /usr/lib/libdl.so without FreeBSD-clibs. (The C++ trio — libcxxrt,
+# libcompiler_rt, libc++ — is added separately; it is a heavier build.)
+# Required before FreeBSD-clibs can be dropped, and needed regardless once
+# the ISO stops installing any pkgbase base package.
+lib/libgcc_s
+lib/libssp_nonshared
+lib/libssp
+lib/msun
+lib/librt
+lib/libdl
+
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)
 lib/libmd

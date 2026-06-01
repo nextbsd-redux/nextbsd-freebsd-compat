@@ -1,4 +1,4 @@
-name: Build NextBSD Base (world)
+name: Build NextBSD Base (curated)
 on:
   repository_dispatch:
     types: [toolchain-updated]
@@ -11,19 +11,21 @@ on:
 
 env:
   FREEBSD_BRANCH: releng/15.0
-  # Trims: no compiler in base (pkg install llvm19 for on-device builds), no
-  # tests/debug/lib32. Applied to BOTH buildworld and installworld.
-  WORLD_FLAGS: WITHOUT_TOOLCHAIN=yes WITHOUT_TESTS=yes WITHOUT_DEBUG_FILES=yes WITHOUT_LIB32=yes
+  # Build prereqs only (these install NOTHING to the base): no compiler in base,
+  # no tests/lib32. The base gets ONLY the dirs in srclist.txt via curated install.
+  WORLD_FLAGS: WITHOUT_TOOLCHAIN=yes WITHOUT_TESTS=yes WITHOUT_LIB32=yes WITHOUT_MAN=yes
 
 jobs:
   base:
     runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
-    # amd64 first; arm64 matrix leg added once this is green.
+    # amd64 first; arm64 matrix leg added once the mechanism is proven.
     container:
       image: ghcr.io/nextbsd-redux/nextbsd-kernel-toolchain:amd64-${{ (github.event.client_payload.fbsd_sha || inputs.fbsd_sha) && format('fbsd-{0}', github.event.client_payload.fbsd_sha || inputs.fbsd_sha) || 'latest' }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Restore ccache
         uses: actions/cache@v4
         with:
@@ -38,36 +40,50 @@ jobs:
           ccache -z
           ccache -s
 
-      - name: Build base world (no toolchain in base)
+      # Stage the cross sysroot: world toolchain (build-tools + cross-tools, minus
+      # clang via --cross-bindir) + headers. Installs NOTHING to the base.
+      - name: Bootstrap sysroot (toolchain + includes)
         run: |
           cd /usr/src
-          # --cross-bindir = ccache wrapper; WITHOUT_TOOLCHAIN keeps clang/lld
-          # out of the base (it's only the cross BUILD compiler in the image).
-          ./tools/build/make.py \
-            --cross-bindir="${CCACHE_CROSS_BINDIR}" \
-            TARGET=amd64 TARGET_ARCH=amd64 \
-            ${WORLD_FLAGS} \
-            buildworld -j"$(nproc)"
+          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            toolchain -j"$(nproc)"
+          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            _includes -j"$(nproc)"
 
-      - name: ccache stats (after build)
+      - name: ccache stats (after bootstrap)
         run: ccache -s
 
-      - name: Stage base (installworld + distribution -> /stage)
+      # Curated per-directory build into /stage, in the cross buildenv. ONLY the
+      # dirs in srclist.txt are built + installed — nothing else touches the base.
+      - name: Build curated base into /stage
         run: |
           cd /usr/src
           mkdir -p /stage
-          ./tools/build/make.py \
-            --cross-bindir="${CCACHE_CROSS_BINDIR}" \
-            TARGET=amd64 TARGET_ARCH=amd64 \
-            ${WORLD_FLAGS} \
-            DESTDIR=/stage \
-            installworld distribution
+          grep -vE '^[[:space:]]*(#|$)' "$GITHUB_WORKSPACE/srclist.txt" > /tmp/srclist
+          cat > /tmp/curated.sh <<'EOS'
+          set -e
+          while IFS= read -r d; do
+            echo "::group::build $d"
+            make -C "/usr/src/$d" obj
+            make -C "/usr/src/$d" all
+            make -C "/usr/src/$d" install DESTDIR=/stage
+            echo "::endgroup::"
+          done < /tmp/srclist
+          EOS
+          chmod +x /tmp/curated.sh
+          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            buildenv BUILDENV_SHELL=/tmp/curated.sh
+
+      - name: Inspect /stage
+        run: |
+          echo "=== /stage tree ==="; find /stage -maxdepth 3 | head -60
+          echo "=== libc present? ==="; ls -l /stage/lib/libc.so* /stage/libexec/ld-elf.so.1 2>&1 || true
 
       - name: Pack base artifact
-        run: |
-          tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
-          echo "=== base tree top level ==="; ls -la /stage
-          echo "=== artifact size ==="; ls -lh /tmp/nextbsd-base-amd64.tar.gz
+        run: tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
 
       - name: Upload base artifact
         uses: actions/upload-artifact@v4

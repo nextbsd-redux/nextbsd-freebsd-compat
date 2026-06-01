@@ -1,0 +1,13 @@
+# Curated /usr/src directories to cross-build into the NextBSD base, in
+# dependency order (libs before consumers). NEVER list freebsd-runtime dirs
+# (init, rc, etc.) — those are owned by nextbsd's Apple-shaped base.
+#
+# Lines starting with # and blank lines are ignored.
+#
+# === PHASE 1: foundation proof (libc + startup + dynamic loader) ===
+# Everything links these. Prove the cross per-directory mechanism here first,
+# then expand to the full fbsdglue set + pkg bootstrap.
+lib/csu
+lib/libc
+lib/libsys
+libexec/rtld-elf

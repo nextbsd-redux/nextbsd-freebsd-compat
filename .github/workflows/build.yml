@@ -64,6 +64,9 @@ jobs:
           grep -vE '^[[:space:]]*(#|$)' "$GITHUB_WORKSPACE/srclist.txt" > /tmp/srclist
           cat > /tmp/curated.sh <<'EOS'
           set -e
+          # Create the base directory skeleton (mtree hierarchy — directories
+          # only, no files, no programs; NOT `distribution`).
+          make -C /usr/src distrib-dirs DESTDIR=/stage
           while IFS= read -r d; do
             echo "::group::build $d"
             make -C "/usr/src/$d" obj

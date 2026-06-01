@@ -64,10 +64,13 @@ jobs:
           grep -vE '^[[:space:]]*(#|$)' "$GITHUB_WORKSPACE/srclist.txt" > /tmp/srclist
           cat > /tmp/curated.sh <<'EOS'
           set -e
-          # buildenv pre-bakes INSTALL/METALOG with an EMPTY DESTDIR; unset so
-          # each make recomputes them with DESTDIR=/stage.
+          # buildenv pre-bakes INSTALL/METALOG with an EMPTY DESTDIR. We must
+          # KEEP the -N (FreeBSD user/group db for name resolution on Linux) and
+          # -U (metalog mode — no real chown, which Linux can't do: no `wheel`),
+          # and only fix the DESTDIR. So set INSTALL/METALOG explicitly with /stage.
           export DESTDIR=/stage
-          unset INSTALL METALOG
+          export METALOG=/stage/METALOG
+          export INSTALL="install -N /usr/src/etc -U -M /stage/METALOG -D /stage"
           # Create ONLY the base-userland target dirs the curated installs need.
           # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
           mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \

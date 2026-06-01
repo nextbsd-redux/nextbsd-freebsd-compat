@@ -38,6 +38,12 @@ lib/libdl
 # provided it via FreeBSD-libcompiler_rt-dev, which we dropped. Static
 # archive only — no runtime ABI-skew risk (unlike libc++/libcxxrt, deferred).
 lib/libcompiler_rt
+# libc_nonshared: the small static companion the clang link spec always pulls
+# in via -lc_nonshared (/usr/lib/libc_nonshared.a). Built by its OWN dir (not
+# lib/libc). Was shipped by FreeBSD-clibs-dev (dropped). The rest of clibs-dev
+# is already covered: crt1.o/Scrt1.o/gcrt1.o <- lib/csu, libc.a <- lib/libc,
+# libssp_nonshared.a <- lib/libssp_nonshared.
+lib/libc_nonshared
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)

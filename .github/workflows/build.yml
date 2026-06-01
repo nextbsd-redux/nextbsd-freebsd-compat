@@ -64,23 +64,24 @@ jobs:
           grep -vE '^[[:space:]]*(#|$)' "$GITHUB_WORKSPACE/srclist.txt" > /tmp/srclist
           cat > /tmp/curated.sh <<'EOS'
           set -e
-          # Create the base directory skeleton (mtree hierarchy — directories
-          # only, no files, no programs; NOT `distribution`).
-          make -C /usr/src distrib-dirs DESTDIR=/stage
+          # buildenv pre-bakes INSTALL/METALOG with an EMPTY DESTDIR; per-dir
+          # installs inherit that and break. Export DESTDIR and unset the
+          # pre-baked vars so each make recomputes them with DESTDIR=/stage.
+          export DESTDIR=/stage
+          unset INSTALL METALOG
+          # Base directory skeleton (mtree hierarchy — directories only).
+          make -C /usr/src distrib-dirs
           while IFS= read -r d; do
             echo "::group::build $d"
             make -C "/usr/src/$d" obj
             make -C "/usr/src/$d" all
-            make -C "/usr/src/$d" install DESTDIR=/stage
+            make -C "/usr/src/$d" install
             echo "::endgroup::"
           done < /tmp/srclist
           EOS
           chmod +x /tmp/curated.sh
-          # DESTDIR must be set on the buildenv call so the env's INSTALL var is
-          # computed with it (the per-dir installs inherit that INSTALL).
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
             TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
-            DESTDIR=/stage \
             buildenv BUILDENV_SHELL=/tmp/curated.sh
 
       - name: Inspect /stage

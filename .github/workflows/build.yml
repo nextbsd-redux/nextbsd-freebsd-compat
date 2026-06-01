@@ -1,19 +1,76 @@
-name: Build FreeBSD Compat
-# PLACEHOLDER — scaffolding only. The fbsdglue build (userland /usr/src targets
-# requiring the world toolchain) is not implemented yet; content migrates from
-# nextbsd-redux/nextbsd later. This stub exists so the repo, its triggers, and
-# its DISPATCH_TOKEN credential are wired in advance and it returns green.
+name: Build NextBSD Base (world)
 on:
   repository_dispatch:
-    types: [compat-build]
+    types: [toolchain-updated]
   workflow_dispatch:
+    inputs:
+      fbsd_sha:
+        description: 'Pinned FreeBSD SHA for the toolchain image tag (blank = latest)'
+        required: false
+        default: ''
+
+env:
+  FREEBSD_BRANCH: releng/15.0
+  # Trims: no compiler in base (pkg install llvm19 for on-device builds), no
+  # tests/debug/lib32. Applied to BOTH buildworld and installworld.
+  WORLD_FLAGS: WITHOUT_TOOLCHAIN=yes WITHOUT_TESTS=yes WITHOUT_DEBUG_FILES=yes WITHOUT_LIB32=yes
 
 jobs:
-  placeholder:
+  base:
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+    # amd64 first; arm64 matrix leg added once this is green.
+    container:
+      image: ghcr.io/nextbsd-redux/nextbsd-kernel-toolchain:amd64-${{ (github.event.client_payload.fbsd_sha || inputs.fbsd_sha) && format('fbsd-{0}', github.event.client_payload.fbsd_sha || inputs.fbsd_sha) || 'latest' }}
     steps:
-      - name: Not implemented yet
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-base-amd64-${{ github.run_id }}
+          restore-keys: |
+            ccache-base-amd64-
+
+      - name: ccache reset counters
         run: |
-          echo "nextbsd-freebsd-compat: build not implemented yet (scaffold)."
-          echo "Pending fbsdglue migration from nextbsd-redux/nextbsd."
-          echo "Exiting 0."
+          ccache -o max_size=8G
+          ccache -z
+          ccache -s
+
+      - name: Build base world (no toolchain in base)
+        run: |
+          cd /usr/src
+          # --cross-bindir = ccache wrapper; WITHOUT_TOOLCHAIN keeps clang/lld
+          # out of the base (it's only the cross BUILD compiler in the image).
+          ./tools/build/make.py \
+            --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 \
+            ${WORLD_FLAGS} \
+            buildworld -j"$(nproc)"
+
+      - name: ccache stats (after build)
+        run: ccache -s
+
+      - name: Stage base (installworld + distribution -> /stage)
+        run: |
+          cd /usr/src
+          mkdir -p /stage
+          ./tools/build/make.py \
+            --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+            TARGET=amd64 TARGET_ARCH=amd64 \
+            ${WORLD_FLAGS} \
+            DESTDIR=/stage \
+            installworld distribution
+
+      - name: Pack base artifact
+        run: |
+          tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
+          echo "=== base tree top level ==="; ls -la /stage
+          echo "=== artifact size ==="; ls -lh /tmp/nextbsd-base-amd64.tar.gz
+
+      - name: Upload base artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextbsd-base-amd64
+          path: /tmp/nextbsd-base-amd64.tar.gz

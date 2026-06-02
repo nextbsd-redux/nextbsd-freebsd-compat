@@ -83,7 +83,8 @@ jobs:
                    /stage/usr/share/zoneinfo /stage/usr/share/vt/fonts \
                    /stage/usr/share/vt/keymaps /stage/usr/share/syscons/keymaps \
                    /stage/usr/share/certs/trusted /stage/usr/share/certs/untrusted \
-                   /stage/usr/share/certs/blocklisted /stage/etc/ssl
+                   /stage/usr/share/certs/blocklisted /stage/etc/ssl \
+                   /stage/boot /stage/boot/lua /stage/boot/defaults /stage/boot/efi
           # NB: /stage/etc/ssl (openssl.cnf + cert.pem) is created so the
           # openssl/caroot installs succeed, then STRIPPED in the Pack step
           # (nextbsd owns /etc; it regenerates cert.pem from /usr/share/certs).
@@ -127,7 +128,11 @@ jobs:
           rm -f /stage/METALOG   # staging manifest byproduct, not part of base
           # HARD GUARD: nextbsd owns these on the ISO — strip them even if a
           # tool's Makefile tried to install a config/runtime file.
-          rm -rf /stage/etc /stage/var /stage/root /stage/boot /stage/.profile /stage/.cshrc
+          # NB: /boot is now KEPT (stand/ installs the loader there). nextbsd
+          # still owns /boot/kernel (kernel + modules + mach.ko) and the
+          # loader.conf.d overlay, so strip just /boot/kernel from the artifact.
+          rm -rf /stage/etc /stage/var /stage/root /stage/.profile /stage/.cshrc
+          rm -rf /stage/boot/kernel
           echo "=== final base tree (top levels) ==="; find /stage -maxdepth 2 -type d | sort
           tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
 

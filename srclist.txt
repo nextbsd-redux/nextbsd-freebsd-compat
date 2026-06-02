@@ -81,6 +81,28 @@ lib/libcasper
 lib/libgeom
 lib/libarchive
 
+# === runtime base packages -> from source (replace pkgbase FreeBSD-* in the
+#     ISO's pklist-base.txt; everything is FreeBSD base source). Dependency-
+#     ordered: openssl libs before consumers (libfetch/openssl/caroot). ===
+# OpenSSL (replaces FreeBSD-openssl / -openssl-lib): libcrypto + libssl + the
+# openssl(1) tool. Big build (perl-generated asm).
+secure/lib/libcrypto
+secure/lib/libssl
+secure/usr.bin/openssl
+# CA root bundle (replaces FreeBSD-caroot): /etc/ssl/cert.pem + certs.
+secure/caroot
+# sqlite3 (replaces FreeBSD-libsqlite3) — pkg needs it.
+lib/libsqlite3
+# libucl (replaces FreeBSD-libucl) — pkg needs it.
+lib/libucl
+# fetch (replaces FreeBSD-fetch): libfetch + fetch(1). HTTPS pulls in openssl.
+lib/libfetch
+usr.bin/fetch
+# timezone data (replaces FreeBSD-zoneinfo): /usr/share/zoneinfo (needs zic).
+share/zoneinfo
+# vt console fonts + keymaps (replaces FreeBSD-vt-data; needs vtfontcvt).
+share/vt
+
 # === pkg bootstrap (you asked for this) ===
 usr.sbin/pkg
 

@@ -63,6 +63,7 @@ lib/libnv
 lib/libelf
 lib/libexpat
 lib/liblzma
+lib/libzstd  # PRIVATELIB -> libprivatezstd.so.5 (libarchive needs it)
 lib/libz
 lib/libbz2
 lib/libsbuf

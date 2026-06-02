@@ -73,9 +73,20 @@ jobs:
           export INSTALL="install -N /usr/src/etc -U -M /stage/METALOG -D /stage"
           # Create ONLY the base-userland target dirs the curated installs need.
           # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
+          # (We normally rely on mtree to pre-create the hierarchy; here we
+          # enumerate just the subdirs our srclist entries install into, since
+          # `install file dir/` requires dir to pre-exist.)
           mkdir -p /stage/bin /stage/sbin /stage/lib /stage/libexec \
                    /stage/usr/bin /stage/usr/sbin /stage/usr/lib /stage/usr/libexec \
-                   /stage/usr/include /stage/usr/share /stage/usr/libdata/pkgconfig
+                   /stage/usr/include /stage/usr/share /stage/usr/libdata/pkgconfig \
+                   /stage/usr/lib/engines-3 /stage/usr/lib/ossl-modules \
+                   /stage/usr/share/zoneinfo /stage/usr/share/vt/fonts \
+                   /stage/usr/share/vt/keymaps /stage/usr/share/syscons/keymaps \
+                   /stage/usr/share/certs/trusted /stage/usr/share/certs/untrusted \
+                   /stage/usr/share/certs/blocklisted /stage/etc/ssl
+          # NB: /stage/etc/ssl (openssl.cnf + cert.pem) is created so the
+          # openssl/caroot installs succeed, then STRIPPED in the Pack step
+          # (nextbsd owns /etc; it regenerates cert.pem from /usr/share/certs).
           # MK_INCLUDES=no per dir (per-dir header installs hit nonstandard
           # contrib /usr/include subdirs). Headers are staged in bulk below.
           while IFS= read -r d; do

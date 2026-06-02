@@ -58,11 +58,28 @@ lib/libc++
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)
+# libxo: structured CLI output (text/JSON/XML). MANY base tools link it
+# (mount, umount, fsck, df, netstat, ...). Missing it = ld-elf.so.1 can't
+# load those tools at all. Symptom that exposed it: launchd's PID-1 rw
+# remount ran `/sbin/mount -uw /`, which failed with `Shared object
+# "libxo.so.0" not found, required by "mount"`, leaving / read-only and
+# cascading into utmp/PAM/mDNSResponder write failures. Shipped silently by
+# pkgbase FreeBSD-runtime before overlay-first dropped pkgbase.
+lib/libxo
 lib/libmd
 lib/libnv
 lib/libelf
+# libkvm: kernel memory / process-table access. ps, pgrep, pkill, fstat,
+# netstat, top, w, vmstat, ... all link libkvm.so.7. Missing it = those tools
+# fail at ld-elf.so.1 load time. Symptom that exposed it: the boot probe's
+# `pgrep -x notifyd` died with `libkvm.so.7 not found` (exit!=0), so the test
+# wrongly reported notifyd dead when launchctl list showed it alive
+# (LastExitStatus=0). Silent pkgbase dep (FreeBSD-runtime) pre-overlay-first.
+lib/libkvm
 lib/libexpat
 lib/liblzma
+# libzstd: PRIVATELIB -> libprivatezstd.so.5 (our libarchive links it).
+lib/libzstd
 lib/libz
 lib/libbz2
 lib/libsbuf
@@ -114,10 +131,21 @@ share/vt
 # /boot/kernel (kernel+modules+mach.ko) + the loader.conf.d overlay.
 stand
 
+# pkg signing fingerprints (/usr/share/keys/pkg/trusted/*) — pkg bootstrap
+# verifies the real pkg(8) it downloads against these. Needed for the
+# overlay-first (pkgbase-free) rootfs where pkg bootstraps ON our base.
+share/keys
+
 # === pkg bootstrap (you asked for this) ===
 usr.sbin/pkg
 
-# === fbsdglue tools (bin/sh intentionally excluded) ===
+# === core base tools ===
+# bin/sh: FreeBSD's POSIX /bin/sh, from source — the system shell (root's login
+# shell + pkg #!/bin/sh scripts). Previously built by the in-VM fbsdglue layer;
+# with that removed and overlay-first dropping pkgbase, the base must provide
+# it. (No distinct "Apple sh" exists — macOS /bin/sh is this same BSD sh.) Its
+# FreeBSD src Makefile needs src.opts.mk, which the make.py buildenv provides.
+bin/sh
 bin/freebsd-version
 bin/kenv
 sbin/devfs

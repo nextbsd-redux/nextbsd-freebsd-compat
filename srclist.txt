@@ -114,6 +114,11 @@ share/vt
 # /boot/kernel (kernel+modules+mach.ko) + the loader.conf.d overlay.
 stand
 
+# pkg signing fingerprints (/usr/share/keys/pkg/trusted/*) — pkg bootstrap
+# verifies the real pkg(8) it downloads against these. Needed for the
+# overlay-first (pkgbase-free) rootfs where pkg bootstraps ON our base.
+share/keys
+
 # === pkg bootstrap (you asked for this) ===
 usr.sbin/pkg
 

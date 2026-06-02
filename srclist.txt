@@ -58,6 +58,14 @@ lib/libc++
 
 # === libraries (dependency-ordered) ===
 # leaf libs (libc only)
+# libxo: structured CLI output (text/JSON/XML). MANY base tools link it
+# (mount, umount, fsck, df, netstat, ...). Missing it = ld-elf.so.1 can't
+# load those tools at all. Symptom that exposed it: launchd's PID-1 rw
+# remount ran `/sbin/mount -uw /`, which failed with `Shared object
+# "libxo.so.0" not found, required by "mount"`, leaving / read-only and
+# cascading into utmp/PAM/mDNSResponder write failures. Shipped silently by
+# pkgbase FreeBSD-runtime before overlay-first dropped pkgbase.
+lib/libxo
 lib/libmd
 lib/libnv
 lib/libelf

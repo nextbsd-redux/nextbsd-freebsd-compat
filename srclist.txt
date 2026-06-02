@@ -124,7 +124,13 @@ share/keys
 # === pkg bootstrap (you asked for this) ===
 usr.sbin/pkg
 
-# === fbsdglue tools (bin/sh intentionally excluded) ===
+# === core base tools ===
+# bin/sh: FreeBSD's POSIX /bin/sh, from source — the system shell (root's login
+# shell + pkg #!/bin/sh scripts). Previously built by the in-VM fbsdglue layer;
+# with that removed and overlay-first dropping pkgbase, the base must provide
+# it. (No distinct "Apple sh" exists — macOS /bin/sh is this same BSD sh.) Its
+# FreeBSD src Makefile needs src.opts.mk, which the make.py buildenv provides.
+bin/sh
 bin/freebsd-version
 bin/kenv
 sbin/devfs

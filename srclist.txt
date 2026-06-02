@@ -103,6 +103,17 @@ share/zoneinfo
 # vt console fonts + keymaps (replaces FreeBSD-vt-data; needs vtfontcvt).
 share/vt
 
+# === boot loader (replaces FreeBSD-bootloader; the LAST base pkg in the ISO) ===
+# Freestanding build (its own libsa mini-libc, EFI + i386 boot blocks, lua
+# loader). On a TARGET=amd64 buildenv, stand/ builds only the amd64-relevant
+# subdirs (efi, i386, common, libsa, liblua, ficl, lua, defaults, fonts).
+# Installs /boot/{loader*,loader_lua.efi,lua/*,defaults/loader.conf,boot1.efi,
+# gptboot,pmbr,...}. The nextbsd ISO's ESP uses /boot/loader_lua.efi as
+# BOOTX64.EFI. Cleanly removable (not a build-time dep — only boots the ISO).
+# The compat Pack step keeps /boot now (was stripped); nextbsd still owns
+# /boot/kernel (kernel+modules+mach.ko) + the loader.conf.d overlay.
+stand
+
 # === pkg bootstrap (you asked for this) ===
 usr.sbin/pkg
 

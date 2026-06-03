@@ -158,16 +158,58 @@ jobs:
           name: nextbsd-base-${{ matrix.target }}
           path: /tmp/nextbsd-base-${{ matrix.target }}.tar.gz
 
-      # Cascade to the nextbsd ISO build, which ingests THIS base artifact.
-      # Gated on main + (implicit) prior-step success so branch/test
-      # workflow_dispatch builds don't trigger a prod ISO. nextbsd pulls the
-      # latest successful compat *main* artifact, so this fires only for main —
-      # by which point the upload above is the newest main success. End-to-end
-      # chain: releng/15.0 -> toolchain -> compat -> nextbsd.
-      - name: Trigger downstream nextbsd ISO build (main only)
-        # Fire once from the amd64 leg only — run_id is shared across matrix
-        # legs, so the ISO build can fetch BOTH nextbsd-base-<arch> artifacts.
-        if: github.ref_name == 'main' && matrix.target == 'amd64'
+  # Refresh the rolling `continuous` release from a successful main build and
+  # then cascade to the nextbsd ISO — in that order, so the ISO ingests this
+  # run's base, not the prior one. Single non-matrix job (collects both arches,
+  # publishes once — no release-creation race). PRs build but never reach here.
+  # End-to-end chain: releng/15.0 -> toolchain -> compat -> nextbsd.
+  publish:
+    name: publish continuous
+    needs: base
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect per-arch assets
+        run: |
+          mkdir -p out
+          # The base artifacts are already tarballs (nextbsd-base-<arch>.tar.gz)
+          # — just gather them; no repackaging needed.
+          find artifacts -name 'nextbsd-base-*.tar.gz' -exec cp {} out/ \;
+          ls -lh out/
+
+      # Stable asset names → each publish overwrites in place; no stale pileup.
+      - name: Publish to continuous release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: continuous
+          name: Continuous base build
+          body: |
+            Rolling from-source base (the fbsdglue set), refreshed on every
+            successful `main` build. Consumed by nextbsd
+            (`nextbsd-base-<arch>.tar.gz`).
+
+            Build log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Commit: ${{ github.sha }}
+          prerelease: true
+          target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: true
+          files: |
+            out/*.tar.gz
+
+      # Cascade to the nextbsd ISO only on a real upstream change
+      # (repository_dispatch, i.e. the releng->toolchain->compat chain), and
+      # only after continuous is refreshed above. A manual/patch main build
+      # refreshes continuous but does NOT kick the ISO — matches how the kernel
+      # repo gates its modules cascade.
+      - name: Trigger downstream nextbsd ISO build
+        if: github.event_name == 'repository_dispatch'
         env:
           GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |

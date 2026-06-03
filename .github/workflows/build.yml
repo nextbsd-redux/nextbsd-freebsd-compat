@@ -2,6 +2,11 @@ name: Build NextBSD Base (curated)
 on:
   repository_dispatch:
     types: [toolchain-updated]
+  pull_request:
+    # Validate the curated base build (both arches) on PRs touching srclist or
+    # the workflow. PR runs never cascade — the downstream nextbsd ISO dispatch
+    # is gated on github.ref_name == 'main', which is "<PR#>/merge" on a PR.
+    paths: ['srclist.txt', '.github/workflows/build.yml']
   workflow_dispatch:
     inputs:
       fbsd_sha:
@@ -20,9 +25,19 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
-    # amd64 first; arm64 matrix leg added once the mechanism is proven.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: amd64
+            target_arch: amd64
+          - target: arm64
+            target_arch: aarch64
     container:
-      image: ghcr.io/nextbsd-redux/nextbsd-kernel-toolchain:amd64-${{ (github.event.client_payload.fbsd_sha || inputs.fbsd_sha) && format('fbsd-{0}', github.event.client_payload.fbsd_sha || inputs.fbsd_sha) || 'latest' }}
+      # Per-arch toolchain image (the same one the kernel/modules builds use).
+      # Both arches cross-build on the x86_64 runner — clang cross-compiles, no
+      # emulation. The toolchain repo publishes both amd64-* and arm64-* tags.
+      image: ghcr.io/nextbsd-redux/nextbsd-kernel-toolchain:${{ matrix.target }}-${{ (github.event.client_payload.fbsd_sha || inputs.fbsd_sha) && format('fbsd-{0}', github.event.client_payload.fbsd_sha || inputs.fbsd_sha) || 'latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,9 +45,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ccache-base-amd64-${{ github.run_id }}
+          key: ccache-base-${{ matrix.target }}-${{ github.run_id }}
           restore-keys: |
-            ccache-base-amd64-
+            ccache-base-${{ matrix.target }}-
 
       - name: ccache reset counters
         run: |
@@ -46,10 +61,10 @@ jobs:
         run: |
           cd /usr/src
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
-            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} ${WORLD_FLAGS} \
             toolchain -j"$(nproc)"
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
-            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} ${WORLD_FLAGS} \
             _includes -j"$(nproc)"
 
       - name: ccache stats (after bootstrap)
@@ -102,7 +117,7 @@ jobs:
           # builds of the Apple components). Diagnose the sysroot, then copy the
           # whole tree via tar pipe (robust for symlinks/perms). The earlier
           # `cp -a` produced a partial tree (missing stdint.h/sys/types.h).
-          SYSROOT_INC=/usr/obj/usr/src/amd64.amd64/tmp/usr/include
+          SYSROOT_INC=/usr/obj/usr/src/${{ matrix.target }}.${{ matrix.target_arch }}/tmp/usr/include
           echo "=== sysroot include diag ==="
           ls -la "$SYSROOT_INC/stdint.h" "$SYSROOT_INC/sys/types.h" 2>&1 | head
           echo "    sysroot include entry count: $(find "$SYSROOT_INC" -type f 2>/dev/null | wc -l)"
@@ -116,7 +131,7 @@ jobs:
           EOS
           chmod +x /tmp/curated.sh
           ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
-            TARGET=amd64 TARGET_ARCH=amd64 ${WORLD_FLAGS} \
+            TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} ${WORLD_FLAGS} \
             buildenv BUILDENV_SHELL=/tmp/curated.sh
 
       - name: Inspect /stage
@@ -135,13 +150,13 @@ jobs:
           rm -rf /stage/etc /stage/var /stage/root /stage/.profile /stage/.cshrc
           rm -rf /stage/boot/kernel
           echo "=== final base tree (top levels) ==="; find /stage -maxdepth 2 -type d | sort
-          tar -C /stage -czf /tmp/nextbsd-base-amd64.tar.gz .
+          tar -C /stage -czf /tmp/nextbsd-base-${{ matrix.target }}.tar.gz .
 
       - name: Upload base artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nextbsd-base-amd64
-          path: /tmp/nextbsd-base-amd64.tar.gz
+          name: nextbsd-base-${{ matrix.target }}
+          path: /tmp/nextbsd-base-${{ matrix.target }}.tar.gz
 
       # Cascade to the nextbsd ISO build, which ingests THIS base artifact.
       # Gated on main + (implicit) prior-step success so branch/test
@@ -150,7 +165,9 @@ jobs:
       # by which point the upload above is the newest main success. End-to-end
       # chain: releng/15.0 -> toolchain -> compat -> nextbsd.
       - name: Trigger downstream nextbsd ISO build (main only)
-        if: github.ref_name == 'main'
+        # Fire once from the amd64 leg only — run_id is shared across matrix
+        # legs, so the ISO build can fetch BOTH nextbsd-base-<arch> artifacts.
+        if: github.ref_name == 'main' && matrix.target == 'amd64'
         env:
           GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |

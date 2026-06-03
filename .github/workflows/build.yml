@@ -2,6 +2,11 @@ name: Build NextBSD Base (curated)
 on:
   repository_dispatch:
     types: [toolchain-updated]
+  pull_request:
+    # Validate the curated base build (both arches) on PRs touching srclist or
+    # the workflow. PR runs never cascade — the downstream nextbsd ISO dispatch
+    # is gated on github.ref_name == 'main', which is "<PR#>/merge" on a PR.
+    paths: ['srclist.txt', '.github/workflows/build.yml']
   workflow_dispatch:
     inputs:
       fbsd_sha:

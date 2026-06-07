@@ -151,10 +151,6 @@ bin/kenv
 sbin/devfs
 sbin/fsck
 sbin/fsck_ffs
-sbin/kldconfig
-sbin/kldload
-sbin/kldstat
-sbin/kldunload
 sbin/ldconfig
 sbin/mount
 sbin/newfs

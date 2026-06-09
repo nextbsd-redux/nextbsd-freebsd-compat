@@ -91,6 +91,13 @@ lib/libufs
 lib/libnetbsd
 lib/libdevctl
 lib/libjail
+# lib80211: net80211 wireless ioctl helper (regdomain/channel/mode). ifconfig
+# DT_NEEDEDs lib80211.so.1 for its wlan/802.11 subcommands, so a missing lib80211
+# means ld-elf.so.1 can't load ifconfig AT ALL (not just the wireless paths).
+# Symptom that exposed it:
+#   ld-elf.so.1: Shared object "lib80211.so.1" not found, required by "ifconfig"
+# Silent pkgbase dep (FreeBSD-utilities) before overlay-first dropped pkgbase.
+lib/lib80211
 lib/ncurses
 # libs with intra-list deps
 lib/libedit

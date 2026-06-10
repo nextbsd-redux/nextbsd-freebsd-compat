@@ -86,6 +86,16 @@ jobs:
           export DESTDIR=/stage
           export METALOG=/stage/METALOG
           export INSTALL="install -N /usr/src/etc -U -M /stage/METALOG -D /stage"
+          # Lever B (#278): add /usr/local/lib to rtld-elf's compiled-in default
+          # search path so ports/pkg binaries resolve their libs with NO hints
+          # file (robust on the live union + installed UFS; covers setuid too).
+          # Via make.conf so CFLAGS+= APPENDS to rtld's Makefile flags (a
+          # command-line `make CFLAGS+=` overrides them and drops rtld's -I ->
+          # "debug.h not found"). printf %s keeps the \" literal (C string).
+          printf '%s\n' \
+            '.if ${.CURDIR:M*/libexec/rtld-elf}' \
+            'CFLAGS+= -DSTANDARD_LIBRARY_PATH=\"/lib:/usr/lib:/usr/lib/system:/usr/local/lib\"' \
+            '.endif' >> /etc/make.conf
           # Create ONLY the base-userland target dirs the curated installs need.
           # NO distrib-dirs, NO FreeBSD mtree, NO /etc, NO /var — nextbsd owns those.
           # (We normally rely on mtree to pre-create the hierarchy; here we

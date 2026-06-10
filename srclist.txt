@@ -181,3 +181,11 @@ usr.sbin/nmtree
 usr.sbin/pciconf
 usr.sbin/pw
 libexec/save-entropy
+
+# Base libs that common ports link but the curated base omitted (the libkiconv
+# class). libudev-devd (X input via udev shim) needs libdevinfo.so.7 +
+# libprocstat.so.1; without them startx dies "libdevinfo.so.7 not found".
+# (The base krb5 closure for curl/git's libkrb5.so.122 is a separate follow-up:
+# it needs MK_KERBEROS enabled + the MIT-vs-Heimdal flavor settled.)
+lib/libdevinfo
+lib/libprocstat

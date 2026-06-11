@@ -189,3 +189,8 @@ libexec/save-entropy
 # it needs MK_KERBEROS enabled + the MIT-vs-Heimdal flavor settled.)
 lib/libdevinfo
 lib/libprocstat
+# xterm (started by startx) needs libulog.so.0 (utmpx login-record helper;
+# LIBADD=md, and lib/libmd is already above); the X stack also DT_NEEDEDs
+# librpcsvc.so.5 (Sun RPC service stubs, rpcgen-generated from *.x).
+lib/libulog
+lib/librpcsvc

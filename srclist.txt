@@ -171,6 +171,12 @@ usr.bin/su
 usr.bin/login
 usr.bin/xz
 usr.sbin/crashinfo
+# certctl(8): builds the system CA trust store — the hashed /etc/ssl/certs dir
+# (the CApath that ports OpenSSL/curl read) + /etc/ssl/cert.pem. nextbsd-work
+# runs `certctl rehash` at image-build time; without certctl in the base it was
+# leaking in untracked from the build VM (pkg owns it on no package). C program,
+# LIBADD=crypto (secure/lib/libcrypto already above).
+usr.sbin/certctl
 usr.sbin/devctl
 usr.sbin/diskinfo
 usr.sbin/fstyp

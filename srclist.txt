@@ -98,6 +98,13 @@ lib/libjail
 #   ld-elf.so.1: Shared object "lib80211.so.1" not found, required by "ifconfig"
 # Silent pkgbase dep (FreeBSD-utilities) before overlay-first dropped pkgbase.
 lib/lib80211
+# libipsec: PF_KEY/IPsec policy helper. ping(8) DT_NEEDEDs libipsec.so.4 for its
+# -P policy support, so a missing libipsec means ld-elf.so.1 can't load ping AT
+# ALL (not just the IPsec paths). Symptom that exposed it (nextbsd#289):
+#   ld-elf.so.1: Shared object "libipsec.so.4" not found, required by "ping"
+# Silent pkgbase dep (FreeBSD-utilities) before overlay-first dropped pkgbase.
+# Not an Apple lib (macOS has no libipsec.so.4) -> safe under no-clobber.
+lib/libipsec
 lib/ncurses
 # libs with intra-list deps
 lib/libedit

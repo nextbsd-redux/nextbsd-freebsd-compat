@@ -126,6 +126,16 @@ usr.bin/fetch
 share/zoneinfo
 # vt console fonts + keymaps (replaces FreeBSD-vt-data; needs vtfontcvt).
 share/vt
+# BSD make system makefiles -> /usr/share/mk (sys.mk + bsd.*.mk). Without them
+# /usr/bin/make dies "no system rules (sys.mk)" and nothing on-system builds
+# (e.g. a port/project Makefile). /usr/share is kept in the base artifact (not
+# stripped like /etc), so this ships directly — no nextbsd-work change needed.
+share/mk
+# make(1) itself: /usr/bin/make (from contrib/bmake). It was leaking into the
+# rootfs untracked from the build VM (pkg owns it on no package), same as
+# certctl — ship it deliberately. FreeBSD build system, not Apple (macOS make
+# is a different tool), so no clobber.
+usr.bin/bmake
 
 # === boot loader (replaces FreeBSD-bootloader; the LAST base pkg in the ISO) ===
 # Freestanding build (its own libsa mini-libc, EFI + i386 boot blocks, lua

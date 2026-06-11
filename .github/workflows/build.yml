@@ -116,11 +116,44 @@ jobs:
           # (nextbsd owns /etc; it regenerates cert.pem from /usr/share/certs).
           # MK_INCLUDES=no per dir (per-dir header installs hit nonstandard
           # contrib /usr/include subdirs). Headers are staged in bulk below.
+          # The MIT krb5 libs (krb5/lib/*) can't be built per-dir without first
+          # staging their build prerequisites OUTSIDE /stage: the compile_et
+          # build-tool + the et awk scripts must be on PATH / in /usr/share/et
+          # (the ephemeral CI container root, DESTDIR=/), and the generated
+          # headers (krb5.h/com_err.h/gssapi.h) must be in the cross sysroot
+          # include dir (DESTDIR=$SYSROOT) the lib compiles read. FreeBSD 15.0
+          # defaults MK_KERBEROS=no, hence the explicit WITH flags on krb5/*.
+          SYSROOT="/usr/obj/usr/src/${{ matrix.target }}.${{ matrix.target_arch }}/tmp"
+          KRBFLAGS="MK_KERBEROS=yes MK_KERBEROS_SUPPORT=yes MK_MITKRB5=yes MK_GSSAPI=yes"
+          # krb5/include installs into these header subdirs and install(1) needs
+          # them to pre-exist — in /stage (the base) and in the sysroot (staged
+          # build headers). /stage/usr/lib/krb5 is the gssapi plugin dir.
+          mkdir -p /stage/usr/include/krb5 /stage/usr/include/gssapi \
+                   /stage/usr/include/gssrpc /stage/usr/lib/krb5 \
+                   "$SYSROOT/usr/include/krb5" "$SYSROOT/usr/include/gssapi" \
+                   "$SYSROOT/usr/include/gssrpc" "$SYSROOT/usr/lib/krb5" \
+                   /usr/include/krb5 /usr/include/gssapi /usr/include/gssrpc \
+                   /usr/lib/krb5 /usr/share/et
+          stage_for_build() { # $1=srcdir $2=destdir — install tools/headers there
+            make -C "/usr/src/$1" install DESTDIR="$2" \
+              INSTALL="install -N /usr/src/etc -U -M $2/METALOG.krbstage -D $2" \
+              METALOG="$2/METALOG.krbstage" MK_MAN=no MK_INCLUDES=yes $KRBFLAGS
+          }
           while IFS= read -r d; do
             echo "::group::build $d"
-            make -C "/usr/src/$d" obj
-            make -C "/usr/src/$d" all
-            make -C "/usr/src/$d" install MK_INCLUDES=no MK_MAN=no
+            FLAGS=""; INCFLAG="MK_INCLUDES=no"
+            case "$d" in krb5/*) FLAGS="$KRBFLAGS" ;; esac
+            case "$d" in krb5/include) INCFLAG="MK_INCLUDES=yes" ;; esac
+            make -C "/usr/src/$d" obj $FLAGS
+            make -C "/usr/src/$d" all $FLAGS
+            make -C "/usr/src/$d" install $INCFLAG MK_MAN=no $FLAGS
+            # krb5 build prerequisites -> stage to PATH/share (/) AND sysroot
+            case "$d" in
+              krb5/util/support|krb5/util/et|krb5/util/compile_et|krb5/util/profile|krb5/include)
+                stage_for_build "$d" /
+                stage_for_build "$d" "$SYSROOT"
+                ;;
+            esac
             echo "::endgroup::"
           done < /tmp/srclist
           # Stage the FULL FreeBSD /usr/include into the base (for nextbsd chroot

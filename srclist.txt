@@ -194,3 +194,24 @@ lib/libprocstat
 # librpcsvc.so.5 (Sun RPC service stubs, rpcgen-generated from *.x).
 lib/libulog
 lib/librpcsvc
+# nano (and other ports) link libmagic.so.4 — file(1)'s libmagic. LIBADD=z
+# (lib/libz already above). Verified absent on the live image (not Apple-
+# provided), so adding it does not clobber an Apple library.
+lib/libmagic
+
+# === MIT Kerberos closure (base krb5 for curl/git) ===
+# curl's libcurl.so.4 links libkrb5.so.122 + libgssapi_krb5.so.122 — MIT krb5
+# 1.22, which is FreeBSD 15.0's DEFAULT krb5 (MK_MITKRB5 is __DEFAULT_YES; the
+# old kerberos5/ tree is Heimdal). No port provides them and they're absent on
+# the live image (no Apple clobber). FreeBSD 15.0 defaults MK_KERBEROS=no, so
+# build.yml passes MK_KERBEROS/MK_MITKRB5=yes for every krb5/* dir AND stages
+# the compile_et build-tool + generated headers (krb5.h/com_err.h) outside
+# /stage so the later libs find them. Dependency-ordered (deps before users):
+krb5/util/support
+krb5/util/et
+krb5/util/compile_et
+krb5/util/profile
+krb5/include
+krb5/lib/crypto
+krb5/lib/krb5
+krb5/lib/gssapi

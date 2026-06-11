@@ -125,6 +125,13 @@ jobs:
           # defaults MK_KERBEROS=no, hence the explicit WITH flags on krb5/*.
           SYSROOT="/usr/obj/usr/src/${{ matrix.target }}.${{ matrix.target_arch }}/tmp"
           KRBFLAGS="MK_KERBEROS=yes MK_KERBEROS_SUPPORT=yes MK_MITKRB5=yes MK_GSSAPI=yes"
+          # krb5/include installs into these header subdirs and install(1) needs
+          # them to pre-exist — in /stage (the base) and in the sysroot (staged
+          # build headers). /stage/usr/lib/krb5 is the gssapi plugin dir.
+          mkdir -p /stage/usr/include/krb5 /stage/usr/include/gssapi \
+                   /stage/usr/include/gssrpc /stage/usr/lib/krb5 \
+                   "$SYSROOT/usr/include/krb5" "$SYSROOT/usr/include/gssapi" \
+                   "$SYSROOT/usr/include/gssrpc" "$SYSROOT/usr/lib/krb5"
           stage_for_build() { # $1=srcdir $2=destdir — install tools/headers there
             make -C "/usr/src/$1" install DESTDIR="$2" \
               INSTALL="install -N /usr/src/etc -U -M $2/METALOG.krbstage -D $2" \

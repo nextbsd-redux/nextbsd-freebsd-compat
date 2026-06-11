@@ -110,6 +110,14 @@ lib/ncurses
 lib/libedit
 lib/libcasper
 lib/libgeom
+# libefivar: EFI variable access. efibootmgr(8) DT_NEEDEDs libefivar.so.1
+# (usr.sbin/efibootmgr: LIBADD= efivar geom; libgeom is already above), so a
+# missing libefivar means ld-elf.so.1 can't load efibootmgr AT ALL. Symptom
+# that exposed it (nextbsd#295):
+#   ld-elf.so.1: Shared object "libefivar.so.1" not found, required by "efibootmgr"
+# Silent pkgbase dep before overlay-first dropped pkgbase. Not an Apple lib
+# (macOS has no libefivar.so.1) -> safe under no-clobber.
+lib/libefivar
 lib/libarchive
 
 # === runtime base packages -> from source (replace pkgbase FreeBSD-* in the

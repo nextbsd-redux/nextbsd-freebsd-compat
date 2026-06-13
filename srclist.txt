@@ -178,7 +178,12 @@ usr.sbin/pkg
 # it. (No distinct "Apple sh" exists — macOS /bin/sh is this same BSD sh.) Its
 # FreeBSD src Makefile needs src.opts.mk, which the make.py buildenv provides.
 bin/sh
-bin/freebsd-version
+# bin/freebsd-version — REMOVED. Replaced by nextbsd-redux/nextbsd's
+# /bin/nextbsd-version, which reports the NextBSD build timestamp (baked from
+# the same IMG_DATE as the ISO/img names + /etc/os-release) and pins the
+# kernel-banner parse to ostype "NextBSD". Stock freebsd-version's -u would
+# report the wrong field (REVISION-BRANCH = 15.0-RELEASE-pN) and its -k would
+# silently fail to match the rebranded kernel banner. (nextbsd#300)
 bin/kenv
 sbin/devfs
 sbin/fsck

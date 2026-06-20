@@ -15,7 +15,7 @@ on:
         default: ''
 
 env:
-  FREEBSD_BRANCH: releng/15.0
+  FREEBSD_BRANCH: releng/15.1
   # Build prereqs only (these install NOTHING to the base): no compiler in base,
   # no tests/lib32. The base gets ONLY the dirs in srclist.txt via curated install.
   WORLD_FLAGS: WITHOUT_TOOLCHAIN=yes WITHOUT_TESTS=yes WITHOUT_LIB32=yes WITHOUT_MAN=yes
@@ -220,7 +220,7 @@ jobs:
   # then cascade to the nextbsd ISO — in that order, so the ISO ingests this
   # run's base, not the prior one. Single non-matrix job (collects both arches,
   # publishes once — no release-creation race). PRs build but never reach here.
-  # End-to-end chain: releng/15.0 -> toolchain -> compat -> nextbsd.
+  # End-to-end chain: releng/15.1 -> toolchain -> compat -> nextbsd.
   publish:
     name: publish continuous
     needs: base

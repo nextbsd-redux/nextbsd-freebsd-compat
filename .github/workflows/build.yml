@@ -23,8 +23,6 @@ env:
 jobs:
   base:
     runs-on: ubuntu-24.04
-    env:
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
     strategy:
       fail-fast: false
       matrix:
@@ -41,34 +39,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/.ccache
-          key: ccache-base-${{ matrix.target }}-${{ github.run_id }}
-          restore-keys: |
-            ccache-base-${{ matrix.target }}-
-
-      - name: ccache reset counters
-        run: |
-          ccache -o max_size=8G
-          ccache -z
-          ccache -s
-
       # Stage the cross sysroot: world toolchain (build-tools + cross-tools, minus
       # clang via --cross-bindir) + headers. Installs NOTHING to the base.
       - name: Bootstrap sysroot (toolchain + includes)
         run: |
           cd /usr/src
-          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+          ./tools/build/make.py --cross-bindir="${CROSS_BINDIR}" \
             TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} ${WORLD_FLAGS} \
             toolchain -j"$(nproc)"
-          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+          ./tools/build/make.py --cross-bindir="${CROSS_BINDIR}" \
             TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} ${WORLD_FLAGS} \
             _includes -j"$(nproc)"
-
-      - name: ccache stats (after bootstrap)
-        run: ccache -s
 
       # Curated per-directory build into /stage, in the cross buildenv. ONLY the
       # dirs in srclist.txt are built + installed — nothing else touches the base.
@@ -179,7 +160,7 @@ jobs:
           echo "    staged include entry count: $(find /stage/usr/include -type f | wc -l)"
           EOS
           chmod +x /tmp/curated.sh
-          ./tools/build/make.py --cross-bindir="${CCACHE_CROSS_BINDIR}" \
+          ./tools/build/make.py --cross-bindir="${CROSS_BINDIR}" \
             TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} ${WORLD_FLAGS} \
             buildenv BUILDENV_SHELL=/tmp/curated.sh
 

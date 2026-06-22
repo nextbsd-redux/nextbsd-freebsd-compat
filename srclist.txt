@@ -199,6 +199,12 @@ sbin/geom
 usr.bin/ldd
 usr.bin/su
 usr.bin/login
+# Boot/login leaf runtime — so getty->login works from the FreeBSD base itself,
+# not from Apple system_cmds or the FreeBSD-runtime pkg stopgap (#207). getty is
+# pure BSD tty plumbing (no Mach/launchd content), so it belongs here in compat
+# rather than nextbsd-userland.
+libexec/getty
+usr.bin/passwd
 usr.bin/xz
 usr.sbin/crashinfo
 # certctl(8): builds the system CA trust store — the hashed /etc/ssl/certs dir
@@ -216,6 +222,11 @@ usr.sbin/nologin
 usr.sbin/nmtree
 usr.sbin/pciconf
 usr.sbin/pw
+# master.passwd -> pwd.db/spwd.db and services -> services.db builders; needed
+# so login/getpwnam work without the FreeBSD-runtime pkg. (NextBSD overlay owns
+# the actual /etc content; compat ships no /etc — it just provides these tools.)
+usr.sbin/pwd_mkdb
+usr.sbin/services_mkdb
 libexec/save-entropy
 
 # Base libs that common ports link but the curated base omitted (the libkiconv
@@ -251,3 +262,14 @@ krb5/include
 krb5/lib/crypto
 krb5/lib/krb5
 krb5/lib/gssapi
+
+# === FreeBSD PAM (libpam + the pam_* modules) ===
+# OpenPAM framework + FreeBSD's standard PAM modules (pam_unix, pam_deny,
+# pam_permit, pam_securetty, pam_nologin, pam_login_access, pam_lastlog,
+# pam_rootok, pam_self, pam_group, ...). NextBSD uses FreeBSD PAM (NOT Apple
+# OpenPAM): login/su/passwd authenticate against /etc/master.passwd via
+# pam_unix. Recursive dir — the libpam framework builds before the modules
+# (their LIBADD=pam resolves to it). Placed after krb5 so pam_krb5's libkrb5
+# dep is present. (If a module pulls a lib not yet in the base — libradius/
+# libtacplus/libypclnt/libssh — add that dir above; iterate.)
+lib/libpam

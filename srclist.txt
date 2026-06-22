@@ -261,3 +261,14 @@ krb5/include
 krb5/lib/crypto
 krb5/lib/krb5
 krb5/lib/gssapi
+
+# === FreeBSD PAM (libpam + the pam_* modules) ===
+# OpenPAM framework + FreeBSD's standard PAM modules (pam_unix, pam_deny,
+# pam_permit, pam_securetty, pam_nologin, pam_login_access, pam_lastlog,
+# pam_rootok, pam_self, pam_group, ...). NextBSD uses FreeBSD PAM (NOT Apple
+# OpenPAM): login/su/passwd authenticate against /etc/master.passwd via
+# pam_unix. Recursive dir — the libpam framework builds before the modules
+# (their LIBADD=pam resolves to it). Placed after krb5 so pam_krb5's libkrb5
+# dep is present. (If a module pulls a lib not yet in the base — libradius/
+# libtacplus/libypclnt/libssh — add that dir above; iterate.)
+lib/libpam

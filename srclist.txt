@@ -217,6 +217,7 @@ usr.sbin/devctl
 usr.sbin/diskinfo
 usr.sbin/fstyp
 usr.sbin/gstat
+usr.sbin/kldxref
 usr.sbin/nologin
 usr.sbin/nmtree
 usr.sbin/pciconf

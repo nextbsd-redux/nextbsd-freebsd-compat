@@ -199,6 +199,12 @@ sbin/geom
 usr.bin/ldd
 usr.bin/su
 usr.bin/login
+# Boot/login leaf runtime — so getty->login works from the FreeBSD base itself,
+# not from Apple system_cmds or the FreeBSD-runtime pkg stopgap (#207). getty is
+# pure BSD tty plumbing (no Mach/launchd content), so it belongs here in compat
+# rather than nextbsd-userland.
+libexec/getty
+usr.bin/passwd
 usr.bin/xz
 usr.sbin/crashinfo
 # certctl(8): builds the system CA trust store — the hashed /etc/ssl/certs dir
@@ -211,11 +217,15 @@ usr.sbin/devctl
 usr.sbin/diskinfo
 usr.sbin/fstyp
 usr.sbin/gstat
-usr.sbin/kldxref
 usr.sbin/nologin
 usr.sbin/nmtree
 usr.sbin/pciconf
 usr.sbin/pw
+# master.passwd -> pwd.db/spwd.db and services -> services.db builders; needed
+# so login/getpwnam work without the FreeBSD-runtime pkg. (NextBSD overlay owns
+# the actual /etc content; compat ships no /etc — it just provides these tools.)
+usr.sbin/pwd_mkdb
+usr.sbin/services_mkdb
 libexec/save-entropy
 
 # Base libs that common ports link but the curated base omitted (the libkiconv

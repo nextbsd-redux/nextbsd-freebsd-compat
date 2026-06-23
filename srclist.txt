@@ -364,3 +364,11 @@ sbin/ifconfig
 sbin/ping
 sbin/route
 sbin/sysctl
+
+# === process / network diagnostic tools (the boot test's daemon-section uses
+# these; pgrep is decisive — every *-PROC check is `pgrep -x <daemon>`). Leaf
+# libs first: netstat links libmemstat (libprocstat already listed above). ===
+lib/libmemstat
+bin/pkill
+usr.bin/netstat
+usr.bin/procstat

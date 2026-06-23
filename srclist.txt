@@ -286,8 +286,10 @@ lib/libpam
 # (grep/cat/sed/awk/ps/sysctl/...). nextbsd's full ISO gets these from its pkg
 # phase; here they come from base source per the srclist model. All support libs
 # (libxo/libkvm/libjail/libutil/libnv/msun) are already listed above, and
-# lib80211 (ifconfig) + libipsec (ping) are too. ifconfig also wants libifconfig:
+# lib80211 (ifconfig) + libipsec (ping) are too. ifconfig wants libifconfig, and
+# bsdgrep DT_NEEDEDs libregex.so.1 (ld-elf can't load grep without it):
 lib/libifconfig
+lib/libregex
 # bin/
 bin/cat
 bin/chmod

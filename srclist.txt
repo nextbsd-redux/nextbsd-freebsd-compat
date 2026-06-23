@@ -370,6 +370,6 @@ sbin/sysctl
 # libs first: netstat links libmemstat, procstat links libprocstat. ===
 lib/libmemstat
 lib/libprocstat
-bin/pgrep
+bin/pkill
 usr.bin/netstat
 usr.bin/procstat

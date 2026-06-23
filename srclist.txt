@@ -271,5 +271,11 @@ krb5/lib/gssapi
 # pam_unix. Recursive dir — the libpam framework builds before the modules
 # (their LIBADD=pam resolves to it). Placed after krb5 so pam_krb5's libkrb5
 # dep is present. (If a module pulls a lib not yet in the base — libradius/
-# libtacplus/libypclnt/libssh — add that dir above; iterate.)
+# libtacplus/libssh — add that dir above; iterate.)
+#
+# libypclnt: pam_unix is built with NIS (MK_NIS default=yes -> -DYP + LIBADD
+# ypclnt), so pam_unix.so.6 needs libypclnt.so.4 to dlopen. NextBSD doesn't use
+# NIS, but the .so dependency must resolve; ship the lib (before lib/libpam so
+# pam_unix links it). Cheaper + more robust than fighting MK_NIS to drop -DYP.
+lib/libypclnt
 lib/libpam

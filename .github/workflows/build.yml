@@ -130,11 +130,6 @@ jobs:
             echo "::group::build $d"
             FLAGS=""; INCFLAG="MK_INCLUDES=no"
             case "$d" in krb5/*) FLAGS="$KRBFLAGS" ;; esac
-            # pam_unix links libypclnt (NIS) under the default MK_NIS=yes, but
-            # NextBSD has no NIS (auth is vs /etc/master.passwd) and ships no
-            # libypclnt.so.4 -> pam_unix.so fails to dlopen -> login can't auth.
-            # Build PAM without NIS so pam_unix has no libypclnt dependency.
-            case "$d" in lib/libpam) FLAGS="MK_NIS=no" ;; esac
             case "$d" in krb5/include) INCFLAG="MK_INCLUDES=yes" ;; esac
             make -C "/usr/src/$d" obj $FLAGS
             make -C "/usr/src/$d" all $FLAGS

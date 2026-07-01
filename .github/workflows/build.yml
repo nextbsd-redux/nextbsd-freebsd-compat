@@ -96,11 +96,12 @@ jobs:
                    /stage/usr/share/zoneinfo /stage/usr/share/vt/fonts \
                    /stage/usr/share/vt/keymaps /stage/usr/share/syscons/keymaps \
                    /stage/usr/share/certs/trusted /stage/usr/share/certs/untrusted \
-                   /stage/usr/share/certs/blocklisted /stage/etc/ssl \
+                   /stage/usr/share/certs/blocklisted /stage/etc/ssl /stage/etc/ssh \
                    /stage/boot /stage/boot/lua /stage/boot/defaults /stage/boot/efi
-          # NB: /stage/etc/ssl (openssl.cnf + cert.pem) is created so the
-          # openssl/caroot installs succeed, then STRIPPED in the Pack step
-          # (nextbsd owns /etc; it regenerates cert.pem from /usr/share/certs).
+          # NB: /stage/etc/ssl (openssl.cnf + cert.pem) and /stage/etc/ssh
+          # (sshd_config/ssh_config/moduli) are created so the openssl/caroot and
+          # sshd/ssh installs succeed, then STRIPPED in the Pack step (nextbsd
+          # owns /etc; the nextbsd-userland overlay ships the real sshd_config).
           # MK_INCLUDES=no per dir (per-dir header installs hit nonstandard
           # contrib /usr/include subdirs). Headers are staged in bulk below.
           # The MIT krb5 libs (krb5/lib/*) can't be built per-dir without first

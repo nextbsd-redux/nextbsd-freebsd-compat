@@ -284,14 +284,15 @@ lib/libpam
 # Just enough to run sshd on the image and ssh/scp INTO it for debugging. The
 # launchd job (com.openssh.sshd) + sshd-keygen-wrapper + the sshd user/group +
 # /etc/ssh/sshd_config + pam.d/sshd all live in the nextbsd-userland overlay;
-# this only supplies the binaries + libssh. Client-side tools (ssh, ssh-agent,
-# ssh-add, ssh-keyscan) and the host-based/FIDO/PKCS11 helpers are omitted to
-# keep the image minimal — add later if a use case needs them.
+# this only supplies the binaries + libssh. Client extras (ssh-agent, ssh-add,
+# ssh-keyscan) and the host-based/FIDO/PKCS11 helpers are omitted to keep the
+# image minimal — add later if a use case needs them.
 #
 # libldns FIRST: MK_LDNS is __DEFAULT_YES, so ssh/sshd DT_NEEDED libprivateldns
 # (SSHFP/VerifyHostKeyDNS) — the same silent PRIVATELIB trap as libxo/libkvm.
 lib/libldns
 secure/lib/libssh
+secure/usr.bin/ssh
 secure/usr.bin/ssh-keygen
 secure/usr.sbin/sshd
 # OpenSSH 9.8+ split (FreeBSD 15.0): sshd execs sshd-session per connection,

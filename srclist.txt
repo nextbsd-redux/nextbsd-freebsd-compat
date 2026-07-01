@@ -280,26 +280,34 @@ krb5/lib/gssapi
 lib/libypclnt
 lib/libpam
 
-# === OpenSSH (minimal: inbound sshd + host-key gen + scp/sftp) ===
-# Just enough to run sshd on the image and ssh/scp INTO it for debugging. The
-# launchd job (com.openssh.sshd) + sshd-keygen-wrapper + the sshd user/group +
-# /etc/ssh/sshd_config + pam.d/sshd all live in the nextbsd-userland overlay;
-# this only supplies the binaries + libssh. Client extras (ssh-agent, ssh-add,
-# ssh-keyscan) and the host-based/FIDO/PKCS11 helpers are omitted to keep the
-# image minimal — add later if a use case needs them.
+# === OpenSSH (full client + server + sftp suite) ===
+# Complete OpenSSH: ssh/scp/sftp clients, sshd, the agent + key tools, and the
+# libexec helpers. Built from granular base source dirs on purpose — we do NOT
+# pull the freebsd-runtime/freebsd-utilities pkgbase packages; the image stays
+# lean by listing just the dirs we use. The launchd job (com.openssh.sshd) +
+# sshd-keygen-wrapper + the sshd user/group + /etc/ssh/sshd_config + pam.d/sshd
+# already live in the nextbsd-userland overlay; this supplies the binaries + libssh.
 #
 # libldns FIRST: MK_LDNS is __DEFAULT_YES, so ssh/sshd DT_NEEDED libprivateldns
 # (SSHFP/VerifyHostKeyDNS) — the same silent PRIVATELIB trap as libxo/libkvm.
 lib/libldns
 secure/lib/libssh
 secure/usr.bin/ssh
+secure/usr.bin/scp
+secure/usr.bin/sftp
+secure/usr.bin/ssh-add
+secure/usr.bin/ssh-agent
 secure/usr.bin/ssh-keygen
+secure/usr.bin/ssh-keyscan
 secure/usr.sbin/sshd
 # OpenSSH 9.8+ split (FreeBSD 15.0): sshd execs sshd-session per connection,
 # which execs sshd-auth — without these two sshd builds but rejects every login.
 secure/libexec/sshd-session
 secure/libexec/sshd-auth
 secure/libexec/sftp-server
+secure/libexec/ssh-keysign
+secure/libexec/ssh-pkcs11-helper
+secure/libexec/ssh-sk-helper
 
 # === Standard userland command suites (base BSD tools) ===
 # The curated base previously shipped only bin/sh. The native CI image (no pkg
